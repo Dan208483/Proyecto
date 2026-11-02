@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planificador Digital & Centro de Estudio</title>
+    <!-- Favicon personalizado -->
+    <link rel="icon" type="image/png" href="logo.png">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -38,7 +40,7 @@
         }
     </style>
 </head>
-<text class="text-slate-100 font-sans min-h-screen pb-12">
+<body class="text-slate-100 font-sans min-h-screen pb-12">
 
     <!-- Header / Barra Superior -->
     <header class="border-b border-slate-800 bg-slate-950/60 backdrop-blur-md sticky top-0 z-50">
@@ -166,9 +168,7 @@
                     </form>
 
                     <!-- Lista Inyectada -->
-                    <div id="contenedor-tareas" class="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
-                        <!-- Tareas se cargan dinámicamente -->
-                    </div>
+                    <div id="contenedor-tareas" class="space-y-2.5 max-h-[350px] overflow-y-auto pr-1"></div>
                 </div>
 
                 <!-- Notas del Día -->
@@ -196,18 +196,22 @@
                     </div>
                     <div>
                         <h2 class="text-xl font-bold text-white">Generador de Material de Estudio</h2>
-                        <p class="text-xs text-slate-400">Ingresa un tema para obtener explicaciones y ejercicios prácticos</p>
+                        <p class="text-xs text-slate-400">Ingresa un tema para obtener explicaciones, ejercicios y consulta directa en Gemini</p>
                     </div>
                 </div>
 
                 <!-- Formulario de Estudio -->
                 <div class="mt-6 space-y-4">
                     <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Tema o Materia a Repasar</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="input-tema-estudio" placeholder="Ej: Leyes de Kirchhoff, Listas doblemente enlazadas, Derivadas..." 
+                    <div class="flex flex-wrap gap-2">
+                        <input type="text" id="input-tema-estudio" placeholder="Ej: Leyes de Kirchhoff, Listas enlazadas, Derivadas..." 
                             class="flex-1 bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
-                        <button onclick="generarMaterialEstudio()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+                        <button onclick="generarMaterialEstudio()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> Generar
+                        </button>
+                        <!-- Botón para saltar a Gemini -->
+                        <button onclick="abrirConsultaGemini()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-blue-600/30">
+                            <i class="fa-solid fa-robot"></i> Consultar en Gemini
                         </button>
                     </div>
                 </div>
@@ -242,21 +246,18 @@
 
     <!-- SCRIPT DE LÓGICA & ALMACENAMIENTO -->
     <script>
-        // Variables de estado
         let fechaActual = new Date();
         let fechaSeleccionadaStr = formatearFechaIso(new Date());
         let datosApp = JSON.parse(localStorage.getItem('agenda_estudio_v3')) || {};
         let timeoutNota = null;
         let ejerciciosGeneradosUltimos = [];
 
-        // Inicialización al cargar la página
         document.addEventListener('DOMContentLoaded', () => {
             renderizarCalendario();
             cargarVistaDia(fechaSeleccionadaStr);
             actualizarEstadisticas();
         });
 
-        // Formateador YYYY-MM-DD
         function formatearFechaIso(dateObj) {
             const y = dateObj.getFullYear();
             const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -264,7 +265,6 @@
             return `${y}-${m}-${d}`;
         }
 
-        // Cambio de Pestañas
         function cambiarPestana(pestana) {
             const agendaSec = document.getElementById('pestana-agenda');
             const estudioSec = document.getElementById('pestana-estudio');
@@ -284,7 +284,6 @@
             }
         }
 
-        // Lógica del Calendario Mensual
         function renderizarCalendario() {
             const grid = document.getElementById('grid-calendario');
             const headerMes = document.getElementById('mes-año-header');
@@ -299,14 +298,12 @@
             const primerDiaMes = new Date(año, mes, 1).getDay();
             const totalDiasMes = new Date(año, mes + 1, 0).getDate();
 
-            // Celdas vacías del mes anterior
             for (let i = 0; i < primerDiaMes; i++) {
                 const celdaVacia = document.createElement('div');
                 celdaVacia.className = "h-11 rounded-xl bg-slate-900/30 opacity-20";
                 grid.appendChild(celdaVacia);
             }
 
-            // Días del mes actual
             for (let dia = 1; dia <= totalDiasMes; dia++) {
                 const fechaStr = `${año}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
                 const esHoy = fechaStr === formatearFechaIso(new Date());
@@ -329,7 +326,6 @@
                 btnDia.className = claseEstilo;
                 btnDia.innerHTML = `<span>${dia}</span>`;
 
-                // Punto indicador si tiene datos
                 if (tieneDatos && !esSeleccionado) {
                     const dot = document.createElement('span');
                     dot.className = "w-1.5 h-1.5 rounded-full bg-indigo-400 absolute bottom-1";
@@ -358,7 +354,6 @@
             cargarVistaDia(fechaStr);
         }
 
-        // Cargar vista diaria y tareas
         function cargarVistaDia(fechaStr) {
             const [y, m, d] = fechaStr.split('-').map(Number);
             const fechaObj = new Date(y, m - 1, d);
@@ -415,7 +410,6 @@
             actualizarProgreso();
         }
 
-        // Agregar Tarea
         function agregarTarea(e) {
             e.preventDefault();
             const input = document.getElementById('input-nueva-tarea');
@@ -458,7 +452,6 @@
             renderizarCalendario();
         }
 
-        // Actualizar barra de progreso y porcentaje
         function actualizarProgreso() {
             const tareas = datosApp[fechaSeleccionadaStr]?.tareas || [];
             const total = tareas.length;
@@ -484,7 +477,6 @@
             actualizarEstadisticas();
         }
 
-        // Guardado de Notas con Auto-save
         function guardarNotaProcesada() {
             clearTimeout(timeoutNota);
             timeoutNota = setTimeout(() => {
@@ -515,7 +507,6 @@
             document.getElementById('stat-tareas').innerText = totalTareas;
         }
 
-        // GENERADOR DE ESTUDIO INTELIGENTE
         function generarMaterialEstudio() {
             const tema = document.getElementById('input-tema-estudio').value.trim();
             if (!tema) return;
@@ -525,25 +516,25 @@
             const ejerciciosDiv = document.getElementById('contenido-ejercicios');
 
             teoriaDiv.innerHTML = `
-                <p><strong>Definición Principal:</strong> ${tema} es un área clave de estudio que abarca conceptos fundamentales de análisis, estructura y aplicación lógica.</p>
+                <p><strong>Definición Principal:</strong> ${tema} abarca principios fundamentales y bases lógicas para la resolución de problemas avanzados.</p>
                 <ul class="list-disc pl-5 space-y-1 text-xs text-slate-300">
-                    <li>Concepto base y fundamentos teóricos de ${tema}.</li>
-                    <li>Fórmulas, modelos o reglas principales a dominar.</li>
-                    <li>Criterios de validación y resolución metódica.</li>
+                    <li>Estructuras y componentes clave de ${tema}.</li>
+                    <li>Leyes, propiedades o teoremas asociados.</li>
+                    <li>Metodología de análisis y verificación práctica.</li>
                 </ul>
             `;
 
             ejerciciosGeneradosUltimos = [
-                `Repasar fundamentos teóricos de: ${tema}`,
-                `Resolver ejercicio práctico nivel 1 sobre ${tema}`,
-                `Verificar casos límite y pruebas paso a paso de ${tema}`
+                `Repasar fundamentación teórica de: ${tema}`,
+                `Resolver caso práctico nivel intermedio sobre ${tema}`,
+                `Validar simulación o pasos de control de ${tema}`
             ];
 
             ejerciciosDiv.innerHTML = '';
             ejerciciosGeneradosUltimos.forEach((ej, idx) => {
                 const card = document.createElement('div');
                 card.className = "p-3 bg-slate-950/50 rounded-lg border border-slate-800 text-xs text-slate-300 flex items-center justify-between";
-                card.innerHTML = `<span><strong>Ejercicios #${idx+1}:</strong> ${ej}</span>`;
+                card.innerHTML = `<span><strong>Ejercicio #${idx+1}:</strong> ${ej}</span>`;
                 ejerciciosDiv.appendChild(card);
             });
 
@@ -570,6 +561,14 @@
             cambiarPestana('agenda');
             renderizarTareasDia();
             renderizarCalendario();
+        }
+
+        // Función para abrir Gemini con la consulta del tema actual
+        function abrirConsultaGemini() {
+            const temaInput = document.getElementById('input-tema-estudio').value.trim();
+            const temaAConsultar = temaInput ? temaInput : "conceptos avanzados de estudio";
+            const promptUrl = `https://gemini.google.com/app?q=${encodeURIComponent("Explícame detalladamente y dame ejercicios prácticos sobre: " + temaAConsultar)}`;
+            window.open(promptUrl, '_blank');
         }
     </script>
 </body>
