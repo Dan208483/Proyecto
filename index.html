@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificador Digital & Centro de Estudio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0B0F17',
+                        glass: 'rgba(23, 30, 46, 0.7)',
+                        glassborder: 'rgba(255, 255, 255, 0.08)'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: radial-gradient(circle at top right, #1e1b4b 0%, #0b0f17 50%, #020617 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(23, 30, 46, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .calendar-day-active {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+    </style>
+</head>
+<text class="text-slate-100 font-sans min-h-screen pb-12">
+
+    <!-- Header / Barra Superior -->
+    <header class="border-b border-slate-800 bg-slate-950/60 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-lg shadow-lg shadow-indigo-500/10">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white tracking-wide">Agenda & Estudio Pro</h1>
+                    <p class="text-xs text-slate-400">Planificador diario con porcentaje de avance</p>
+                </div>
+            </div>
+
+            <!-- Navegación de Pestañas -->
+            <div class="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+                <button id="tab-btn-agenda" onclick="cambiarPestana('agenda')" class="px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 bg-indigo-600 text-white shadow-md">
+                    <i class="fa-solid fa-calendar-days"></i> Calendario & Tareas
+                </button>
+                <button id="tab-btn-estudio" onclick="cambiarPestana('estudio')" class="px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-graduation-cap"></i> Centro de Estudio
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+
+        <!-- PESTAÑA 1: CALENDARIO & TAREAS -->
+        <section id="pestana-agenda" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Columna Izquierda: Calendario Mensual -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="glass-card rounded-2xl p-5 shadow-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 id="mes-año-header" class="text-lg font-bold text-white capitalize"></h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="cambiarMes(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                                <i class="fa-solid fa-chevron-left text-xs"></i>
+                            </button>
+                            <button onclick="irHoy()" class="px-3 py-1 bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30 text-xs rounded-lg border border-indigo-500/30 transition">
+                                Hoy
+                            </button>
+                            <button onclick="cambiarMes(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                                <i class="fa-solid fa-chevron-right text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Días de la semana -->
+                    <div class="grid grid-cols-7 gap-1 mb-2 text-center text-xs font-semibold text-slate-400">
+                        <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
+                    </div>
+
+                    <!-- Matriz del Calendario -->
+                    <div id="grid-calendario" class="grid grid-cols-7 gap-1"></div>
+                </div>
+
+                <!-- Resumen Rápido -->
+                <div class="glass-card rounded-2xl p-5 border border-slate-800/80">
+                    <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-400"></i> Resumen Global
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3 text-center">
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <span class="text-xs text-slate-400 block">Días Registrados</span>
+                            <span id="stat-dias" class="text-lg font-bold text-white">0</span>
+                        </div>
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <span class="text-xs text-slate-400 block">Total Tareas</span>
+                            <span id="stat-tareas" class="text-lg font-bold text-indigo-400">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Planificador Diario -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Encabezado del Día Seleccionado -->
+                <div class="glass-card rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+                    <div class="flex flex-wrap justify-between items-start gap-4 mb-4">
+                        <div>
+                            <span id="label-fecha-sub" class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Vista Diaria</span>
+                            <h2 id="label-fecha-titulo" class="text-2xl font-extrabold text-white capitalize mt-1">Lunes, 2 de Noviembre</h2>
+                        </div>
+                        
+                        <!-- Contador de porcentaje -->
+                        <div class="text-right">
+                            <span id="label-porcentaje-num" class="text-3xl font-black text-indigo-400">0%</span>
+                            <span class="block text-xs text-slate-400">Completado</span>
+                        </div>
+                    </div>
+
+                    <!-- Barra de Progreso Dinámica -->
+                    <div class="w-full bg-slate-900 rounded-full h-3 p-0.5 border border-slate-800">
+                        <div id="barra-progreso" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-400 mt-2">
+                        <span id="stat-tareas-conteo">0 de 0 tareas completadas</span>
+                        <span id="stat-estado-texto" class="text-amber-400 font-medium">Pendiente</span>
+                    </div>
+                </div>
+
+                <!-- Lista de Tareas -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-base font-bold text-white mb-4 flex items-center justify-between">
+                        <span><i class="fa-solid fa-list-check text-indigo-400 mr-2"></i> Actividades del Día</span>
+                    </h3>
+
+                    <!-- Input para Nueva Tarea -->
+                    <form onsubmit="agregarTarea(event)" class="flex flex-wrap gap-2 mb-6">
+                        <input type="text" id="input-nueva-tarea" placeholder="Agregar nueva tarea..." 
+                            class="flex-1 bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+                        <select id="select-categoria" class="bg-slate-900/80 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-indigo-500">
+                            <option value="Estudio">Estudio</option>
+                            <option value="Trabajo">Trabajo</option>
+                            <option value="Personal">Personal</option>
+                            <option value="Salud">Salud</option>
+                        </select>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-lg shadow-indigo-600/30 flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Agregar
+                        </button>
+                    </form>
+
+                    <!-- Lista Inyectada -->
+                    <div id="contenedor-tareas" class="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+                        <!-- Tareas se cargan dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Notas del Día -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-note-sticky text-amber-400"></i> Notas y Recordatorios
+                        </h3>
+                        <span id="toast-nota-guardada" class="text-xs text-emerald-400 opacity-0 transition-opacity duration-300">
+                            <i class="fa-solid fa-check mr-1"></i> Guardado automáticamente
+                        </span>
+                    </div>
+                    <textarea id="textarea-notas" oninput="guardarNotaProcesada()" placeholder="Escribe aquí notas adicionales del día, enlaces, recordatorios..." 
+                        class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 h-28 resize-none transition leading-relaxed"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- PESTAÑA 2: CENTRO DE ESTUDIO INTELIGENTE -->
+        <section id="pestana-estudio" class="hidden space-y-6 max-w-4xl mx-auto">
+            <div class="glass-card rounded-2xl p-6 shadow-2xl">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                        <i class="fa-solid fa-brain text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Generador de Material de Estudio</h2>
+                        <p class="text-xs text-slate-400">Ingresa un tema para obtener explicaciones y ejercicios prácticos</p>
+                    </div>
+                </div>
+
+                <!-- Formulario de Estudio -->
+                <div class="mt-6 space-y-4">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Tema o Materia a Repasar</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-tema-estudio" placeholder="Ej: Leyes de Kirchhoff, Listas doblemente enlazadas, Derivadas..." 
+                            class="flex-1 bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                        <button onclick="generarMaterialEstudio()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resultado de Estudio -->
+                <div id="resultado-estudio" class="hidden space-y-6 mt-8 pt-6 border-t border-slate-800">
+                    <!-- Teoría -->
+                    <div class="bg-slate-900/80 rounded-xl p-5 border border-slate-800">
+                        <h3 class="text-md font-bold text-emerald-400 flex items-center gap-2 mb-3">
+                            <i class="fa-solid fa-book-open"></i> Resumen Teórico y Puntos Clave
+                        </h3>
+                        <div id="contenido-teoria" class="text-slate-300 text-sm leading-relaxed space-y-2"></div>
+                    </div>
+
+                    <!-- Ejercicios Prácticos -->
+                    <div class="bg-slate-900/80 rounded-xl p-5 border border-slate-800">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-md font-bold text-amber-400 flex items-center gap-2">
+                                <i class="fa-solid fa-dumbbell"></i> Ejercicios Prácticos Recomendados
+                            </h3>
+                            <button onclick="convertirEjerciciosEnTareas()" class="text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 border border-emerald-500/30 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus"></i> Añadir como tareas de hoy
+                            </button>
+                        </div>
+                        <div id="contenido-ejercicios" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- SCRIPT DE LÓGICA & ALMACENAMIENTO -->
+    <script>
+        // Variables de estado
+        let fechaActual = new Date();
+        let fechaSeleccionadaStr = formatearFechaIso(new Date());
+        let datosApp = JSON.parse(localStorage.getItem('agenda_estudio_v3')) || {};
+        let timeoutNota = null;
+        let ejerciciosGeneradosUltimos = [];
+
+        // Inicialización al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            renderizarCalendario();
+            cargarVistaDia(fechaSeleccionadaStr);
+            actualizarEstadisticas();
+        });
+
+        // Formateador YYYY-MM-DD
+        function formatearFechaIso(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // Cambio de Pestañas
+        function cambiarPestana(pestana) {
+            const agendaSec = document.getElementById('pestana-agenda');
+            const estudioSec = document.getElementById('pestana-estudio');
+            const btnAgenda = document.getElementById('tab-btn-agenda');
+            const btnEstudio = document.getElementById('tab-btn-estudio');
+
+            if (pestana === 'agenda') {
+                agendaSec.classList.remove('hidden');
+                estudioSec.classList.add('hidden');
+                btnAgenda.className = "px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 bg-indigo-600 text-white shadow-md";
+                btnEstudio.className = "px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white";
+            } else {
+                agendaSec.classList.add('hidden');
+                estudioSec.classList.remove('hidden');
+                btnEstudio.className = "px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 bg-indigo-600 text-white shadow-md";
+                btnAgenda.className = "px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white";
+            }
+        }
+
+        // Lógica del Calendario Mensual
+        function renderizarCalendario() {
+            const grid = document.getElementById('grid-calendario');
+            const headerMes = document.getElementById('mes-año-header');
+            grid.innerHTML = '';
+
+            const año = fechaActual.getFullYear();
+            const mes = fechaActual.getMonth();
+
+            const opcionesMes = { month: 'long', year: 'numeric' };
+            headerMes.innerText = new Date(año, mes).toLocaleDateString('es-ES', opcionesMes);
+
+            const primerDiaMes = new Date(año, mes, 1).getDay();
+            const totalDiasMes = new Date(año, mes + 1, 0).getDate();
+
+            // Celdas vacías del mes anterior
+            for (let i = 0; i < primerDiaMes; i++) {
+                const celdaVacia = document.createElement('div');
+                celdaVacia.className = "h-11 rounded-xl bg-slate-900/30 opacity-20";
+                grid.appendChild(celdaVacia);
+            }
+
+            // Días del mes actual
+            for (let dia = 1; dia <= totalDiasMes; dia++) {
+                const fechaStr = `${año}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+                const esHoy = fechaStr === formatearFechaIso(new Date());
+                const esSeleccionado = fechaStr === fechaSeleccionadaStr;
+                const tieneDatos = datosApp[fechaStr] && (datosApp[fechaStr].tareas.length > 0 || datosApp[fechaStr].notas);
+
+                const btnDia = document.createElement('button');
+                btnDia.onclick = () => seleccionarDia(fechaStr);
+
+                let claseEstilo = "h-11 rounded-xl flex flex-col items-center justify-center relative text-xs font-medium transition ";
+                
+                if (esSeleccionado) {
+                    claseEstilo += "bg-indigo-600 text-white font-bold calendar-day-active ";
+                } else if (esHoy) {
+                    claseEstilo += "bg-indigo-900/40 border border-indigo-500/50 text-indigo-300 hover:bg-indigo-800/50 ";
+                } else {
+                    claseEstilo += "bg-slate-900/60 hover:bg-slate-800 text-slate-300 border border-slate-800/60 ";
+                }
+
+                btnDia.className = claseEstilo;
+                btnDia.innerHTML = `<span>${dia}</span>`;
+
+                // Punto indicador si tiene datos
+                if (tieneDatos && !esSeleccionado) {
+                    const dot = document.createElement('span');
+                    dot.className = "w-1.5 h-1.5 rounded-full bg-indigo-400 absolute bottom-1";
+                    btnDia.appendChild(dot);
+                }
+
+                grid.appendChild(btnDia);
+            }
+        }
+
+        function cambiarMes(delta) {
+            fechaActual.setMonth(fechaActual.getMonth() + delta);
+            renderizarCalendario();
+        }
+
+        function irHoy() {
+            fechaActual = new Date();
+            fechaSeleccionadaStr = formatearFechaIso(new Date());
+            renderizarCalendario();
+            cargarVistaDia(fechaSeleccionadaStr);
+        }
+
+        function seleccionarDia(fechaStr) {
+            fechaSeleccionadaStr = fechaStr;
+            renderizarCalendario();
+            cargarVistaDia(fechaStr);
+        }
+
+        // Cargar vista diaria y tareas
+        function cargarVistaDia(fechaStr) {
+            const [y, m, d] = fechaStr.split('-').map(Number);
+            const fechaObj = new Date(y, m - 1, d);
+            
+            const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long' };
+            document.getElementById('label-fecha-titulo').innerText = fechaObj.toLocaleDateString('es-ES', opcionesFecha);
+
+            if (!datosApp[fechaStr]) {
+                datosApp[fechaStr] = { tareas: [], notas: "" };
+            }
+
+            document.getElementById('textarea-notas').value = datosApp[fechaStr].notas || "";
+            renderizarTareasDia();
+        }
+
+        function renderizarTareasDia() {
+            const contenedor = document.getElementById('contenedor-tareas');
+            contenedor.innerHTML = '';
+
+            const tareas = datosApp[fechaSeleccionadaStr]?.tareas || [];
+
+            if (tareas.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-xs">
+                        <i class="fa-solid fa-clipboard-list text-2xl mb-2 text-slate-600 block"></i>
+                        No hay actividades agendadas para este día.
+                    </div>
+                `;
+            } else {
+                tareas.forEach(tarea => {
+                    const item = document.createElement('div');
+                    item.className = `flex items-center justify-between p-3 rounded-xl border transition ${tarea.checked ? 'bg-slate-950/40 border-slate-900 opacity-60' : 'bg-slate-900/70 border-slate-800'}`;
+
+                    let badgeColor = "bg-indigo-500/20 text-indigo-300 border-indigo-500/30";
+                    if (tarea.category === 'Trabajo') badgeColor = "bg-purple-500/20 text-purple-300 border-purple-500/30";
+                    if (tarea.category === 'Salud') badgeColor = "bg-emerald-500/20 text-emerald-300 border-emerald-500/30";
+                    if (tarea.category === 'Personal') badgeColor = "bg-amber-500/20 text-amber-300 border-amber-500/30";
+
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <input type="checkbox" ${tarea.checked ? 'checked' : ''} onchange="toggleTarea('${tarea.id}')" 
+                                class="w-4 h-4 accent-indigo-500 rounded cursor-pointer">
+                            <span class="text-sm text-slate-200 truncate ${tarea.checked ? 'line-through text-slate-500' : ''}">${tarea.label}</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-md border ${badgeColor}">${tarea.category}</span>
+                        </div>
+                        <button onclick="eliminarTarea('${tarea.id}')" class="text-slate-500 hover:text-rose-400 transition ml-2 px-1">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    `;
+                    contenedor.appendChild(item);
+                });
+            }
+
+            actualizarProgreso();
+        }
+
+        // Agregar Tarea
+        function agregarTarea(e) {
+            e.preventDefault();
+            const input = document.getElementById('input-nueva-tarea');
+            const select = document.getElementById('select-categoria');
+            
+            if (!input.value.trim()) return;
+
+            const nuevaTarea = {
+                id: 'task_' + Date.now(),
+                label: input.value.trim(),
+                category: select.value,
+                checked: false
+            };
+
+            if (!datosApp[fechaSeleccionadaStr]) {
+                datosApp[fechaSeleccionadaStr] = { tareas: [], notas: "" };
+            }
+
+            datosApp[fechaSeleccionadaStr].tareas.push(nuevaTarea);
+            guardarStorage();
+            input.value = '';
+            renderizarTareasDia();
+            renderizarCalendario();
+        }
+
+        function toggleTarea(id) {
+            const tareas = datosApp[fechaSeleccionadaStr].tareas;
+            const t = tareas.find(x => x.id === id);
+            if (t) {
+                t.checked = !t.checked;
+                guardarStorage();
+                renderizarTareasDia();
+            }
+        }
+
+        function eliminarTarea(id) {
+            datosApp[fechaSeleccionadaStr].tareas = datosApp[fechaSeleccionadaStr].tareas.filter(x => x.id !== id);
+            guardarStorage();
+            renderizarTareasDia();
+            renderizarCalendario();
+        }
+
+        // Actualizar barra de progreso y porcentaje
+        function actualizarProgreso() {
+            const tareas = datosApp[fechaSeleccionadaStr]?.tareas || [];
+            const total = tareas.length;
+            const completadas = tareas.filter(t => t.checked).length;
+            const pct = total === 0 ? 0 : Math.round((completadas / total) * 100);
+
+            document.getElementById('label-porcentaje-num').innerText = `${pct}%`;
+            document.getElementById('barra-progreso').style.width = `${pct}%`;
+            document.getElementById('stat-tareas-conteo').innerText = `${completadas} de ${total} actividades completadas`;
+            
+            const estadoTexto = document.getElementById('stat-estado-texto');
+            if (total === 0) {
+                estadoTexto.innerText = "Sin tareas";
+                estadoTexto.className = "text-slate-500 font-medium";
+            } else if (pct === 100) {
+                estadoTexto.innerText = "¡Día Completado!";
+                estadoTexto.className = "text-emerald-400 font-bold";
+            } else {
+                estadoTexto.innerText = "En progreso";
+                estadoTexto.className = "text-amber-400 font-medium";
+            }
+
+            actualizarEstadisticas();
+        }
+
+        // Guardado de Notas con Auto-save
+        function guardarNotaProcesada() {
+            clearTimeout(timeoutNota);
+            timeoutNota = setTimeout(() => {
+                const txt = document.getElementById('textarea-notas').value;
+                if (!datosApp[fechaSeleccionadaStr]) {
+                    datosApp[fechaSeleccionadaStr] = { tareas: [], notas: "" };
+                }
+                datosApp[fechaSeleccionadaStr].notas = txt;
+                guardarStorage();
+                
+                const toast = document.getElementById('toast-nota-guardada');
+                toast.style.opacity = '1';
+                setTimeout(() => { toast.style.opacity = '0'; }, 1500);
+                renderizarCalendario();
+            }, 500);
+        }
+
+        function guardarStorage() {
+            localStorage.setItem('agenda_estudio_v3', JSON.stringify(datosApp));
+        }
+
+        function actualizarEstadisticas() {
+            const diasConDatos = Object.keys(datosApp).filter(k => datosApp[k].tareas.length > 0 || datosApp[k].notas);
+            let totalTareas = 0;
+            Object.values(datosApp).forEach(d => { totalTareas += d.tareas.length; });
+
+            document.getElementById('stat-dias').innerText = diasConDatos.length;
+            document.getElementById('stat-tareas').innerText = totalTareas;
+        }
+
+        // GENERADOR DE ESTUDIO INTELIGENTE
+        function generarMaterialEstudio() {
+            const tema = document.getElementById('input-tema-estudio').value.trim();
+            if (!tema) return;
+
+            const resDiv = document.getElementById('resultado-estudio');
+            const teoriaDiv = document.getElementById('contenido-teoria');
+            const ejerciciosDiv = document.getElementById('contenido-ejercicios');
+
+            teoriaDiv.innerHTML = `
+                <p><strong>Definición Principal:</strong> ${tema} es un área clave de estudio que abarca conceptos fundamentales de análisis, estructura y aplicación lógica.</p>
+                <ul class="list-disc pl-5 space-y-1 text-xs text-slate-300">
+                    <li>Concepto base y fundamentos teóricos de ${tema}.</li>
+                    <li>Fórmulas, modelos o reglas principales a dominar.</li>
+                    <li>Criterios de validación y resolución metódica.</li>
+                </ul>
+            `;
+
+            ejerciciosGeneradosUltimos = [
+                `Repasar fundamentos teóricos de: ${tema}`,
+                `Resolver ejercicio práctico nivel 1 sobre ${tema}`,
+                `Verificar casos límite y pruebas paso a paso de ${tema}`
+            ];
+
+            ejerciciosDiv.innerHTML = '';
+            ejerciciosGeneradosUltimos.forEach((ej, idx) => {
+                const card = document.createElement('div');
+                card.className = "p-3 bg-slate-950/50 rounded-lg border border-slate-800 text-xs text-slate-300 flex items-center justify-between";
+                card.innerHTML = `<span><strong>Ejercicios #${idx+1}:</strong> ${ej}</span>`;
+                ejerciciosDiv.appendChild(card);
+            });
+
+            resDiv.classList.remove('hidden');
+        }
+
+        function convertirEjerciciosEnTareas() {
+            if (ejerciciosGeneradosUltimos.length === 0) return;
+
+            if (!datosApp[fechaSeleccionadaStr]) {
+                datosApp[fechaSeleccionadaStr] = { tareas: [], notas: "" };
+            }
+
+            ejerciciosGeneradosUltimos.forEach(ej => {
+                datosApp[fechaSeleccionadaStr].tareas.push({
+                    id: 'task_' + Date.now() + Math.random().toString(36).substr(2, 4),
+                    label: ej,
+                    category: 'Estudio',
+                    checked: false
+                });
+            });
+
+            guardarStorage();
+            cambiarPestana('agenda');
+            renderizarTareasDia();
+            renderizarCalendario();
+        }
+    </script>
+</body>
+</html>
